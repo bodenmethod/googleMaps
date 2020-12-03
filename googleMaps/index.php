@@ -75,7 +75,7 @@
 
 <!-- API KEY VERIFICATION SCRIPT FROM GOOGLE WITH CALLBACK PARAMETER -->
 <script
-async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAN8ASGLkd72nHqW4MnXeLe5Wiil5-D47w&callback=initMap">
+async defer src="https://maps.googleapis.com/maps/api/js?key={your_api_key}&callback=initMap">
 </script>
 
 
