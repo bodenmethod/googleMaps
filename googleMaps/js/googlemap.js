@@ -1,11 +1,12 @@
 var map;
 var geocoder;
+var markerCluster;
 
 //Code to load the map with center point of Monterey MA
 function initMap() {
 	var monterey = {lat: 42.181613, lng: -73.215013};
     map = new google.maps.Map(document.getElementById('map'), {
-		zoom: 14,
+		zoom: 10,
 		center: monterey,
 		mapTypeId: google.maps.MapTypeId.HYBRID,
 		labels: true,
@@ -17,12 +18,13 @@ function initMap() {
     codeAddress(cusdata);
 
     var allData = JSON.parse(document.getElementById('allData').innerHTML);
-	showAllCustomers(allData)
+	showAllCustomers(allData);
 
 	var searchData = JSON.parse(document.getElementById('searchData').innerHTML);
 	showSearchedCustomer(searchData)
 	
 }
+
 
 function showAllCustomers(allData) {
 	//declare info window variable outside of loop to allow to clear when selecting other markers
@@ -32,7 +34,7 @@ function showAllCustomers(allData) {
 		var content = document.createElement('div');
 		var strong = document.createElement('strong');
 		
-		strong.textContent = [data.name + ' ' + data.address];
+		strong.textContent = [data.lastName + ' ' + data.physicalAddress];
 		content.appendChild(strong);
 
 		//add image to infowindow - you are also able to add image path to mysql and then append dynamically
@@ -41,13 +43,23 @@ function showAllCustomers(allData) {
 		img.style.width = '50px';
 		content.appendChild(img);
 
+		var markers = [];
+
 		//Create markers for customer locations and customize
 		var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
 		var marker = new google.maps.Marker({
-	      position: new google.maps.LatLng(data.lat, data.lng),
+	      position: new google.maps.LatLng(data.latitude, data.longitude),
 		  map: map,
 		  icon: iconBase + 'homegardenbusiness.png'
-	    });
+		});
+
+		markers.push(marker);
+	
+		//Create marker clusterer to group data
+		markerCluster = new MarkerClusterer(map, markers, {
+      imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'
+	});
+	
 
 		// Add event listener to open info window and show customer name
 	    marker.addListener('mouseover', function(){
@@ -59,15 +71,15 @@ function showAllCustomers(allData) {
 				map.panTo(this.getPosition());
 				map.setZoom(20);
 				});  
-		
 		});
 	}) 
+
 }
 
 //google maps geocoding code for address to collect lat lng from customer addresses
 function codeAddress(cusdata) {
    Array.prototype.forEach.call(cusdata, function(data){
-    	var address = data.name + ' ' + data.address;
+    	var address = data.lastName + ' ' + data.physicalAddress;
 	    geocoder.geocode( { 'address': address}, function(results, status) {
 	      if (status == 'OK') {
 			map.setCenter(results[0].geometry.location);
@@ -75,12 +87,19 @@ function codeAddress(cusdata) {
 //create object that collects the lat and lng data and pass function to update customers lat lng
 	        var points = {};
 	        points.id = data.id;
-	        points.lat = map.getCenter().lat();
-	        points.lng = map.getCenter().lng();
+	        points.latitude = map.getCenter().lat();
+	        points.longitude = map.getCenter().lng();
 	        updateCustomersWithLatLng(points);
-	      } else {
-	        alert('Geocode was not successful for the following reason: ' + status);
-	      }
+		
+		//add code to check the result status from geocode request and if we get an OVER_QUERY_LIMIT error we try again after slight delay // Jay 20201208-1015
+		} else if (status === google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {    
+            setTimeout(function() {
+                codeAddress(cusdata);
+            }, 100);
+         } // else {
+        //     alert("Geocode was not successful for the following reason:" 
+        //           + status);
+        // } 
 	    });
 	});
 }
@@ -116,7 +135,7 @@ function showSearchedCustomer(searchData) {
 		var content = document.createElement('div');
 		var strong = document.createElement('strong');
 		
-		strong.textContent = [data.name + ' ' + data.address];
+		strong.textContent = [data.lastName + ' ' + data.physicalAddress];
 		content.appendChild(strong);
 
 		//add image to infowindow - you are also able to add image path to mysql and then append dynamically
@@ -128,7 +147,7 @@ function showSearchedCustomer(searchData) {
 		//Create marker for searched customer location and customize
 		var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
 		var marker = new google.maps.Marker({	
-	      position: new google.maps.LatLng(data.lat, data.lng),
+	      position: new google.maps.LatLng(data.latitude, data.longitude),
 		  map: map,
 		  icon: iconBase + 'homegardenbusiness.png'
 	    });
